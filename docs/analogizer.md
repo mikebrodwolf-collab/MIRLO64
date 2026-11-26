@@ -134,6 +134,19 @@ cartridge, a mouse, a keyboard or a VRU work as far as the game's own code does.
 How to connect an N64 SNAC board to the Analogizer, and the wiring it needs, is illustrated on the Analogizer's page for it:
 <https://analogizer-fpga.com/pages/nintendo-64-snac>.
 
+
+**PlayStation DualShock (P1)** is the additional value 16 in the "Analogizer controllers" menu. It selects one PlayStation controller on player 1 instead of the N64 Joybus. The DualShock's buttons and both stick axes are sampled into player 1's input words. The N64 has no L3/R3 buttons, so those stick clicks are mapped to C-down and C-up. Press the controller's ANALOG button to enable its two analog sticks; digital mode leaves the sticks centred.
+
+This mode uses the Analogizer R.1 adapter's **physical Config B** position. Connect the controller to the USB 3 SNAC connector using a PSX-compatible cable and set the adapter's A/B switch to B:
+
+| Signal | Pocket pin |
+|---|---|
+| ATT1 / ATT2 | bank 1 bits 6 / 7 |
+| PSX CLK / CMD | pins 30 / 31 |
+| PSX DAT / ACK / IRQ10 | bank 0 bits 7 / 6 / 5 |
+
+Bank 0 is an input in this mode; pins 30 and 31 are outputs. Bank 1 bits 6 and 7 carry ATT1/ATT2 while its lower six bits continue carrying the video DAC clock and data, so video can remain enabled. If video is Off, bank 1 is still enabled as an output for ATT1/ATT2. A Game Boy cartridge in the slot still owns the port and prevents PlayStation mode.
+
 ### Where it sits
 
 `rtl/soc/rcp_si.sv` is the SI and the PIF RAM; the PIF's command interpreter is the runtime's (`pif_run`, `lang/n64rt/n64rt_io.c`).

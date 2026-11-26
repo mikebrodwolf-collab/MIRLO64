@@ -1,5 +1,6 @@
 set_global_assignment -name SYSTEMVERILOG_FILE        [file join $::quartus(qip_path) "apf_wishbone_master.sv"]
 set_global_assignment -name SYSTEMVERILOG_FILE        [file join $::quartus(qip_path) "audio.sv"]
+set_global_assignment -name SYSTEMVERILOG_FILE        [file join $::quartus(qip_path) "an_psx_dualshock.sv"]
 set_global_assignment -name SYSTEMVERILOG_FILE        [file join $::quartus(qip_path) "core_top.sv"]
 set_global_assignment -name VERILOG_FILE              [file join $::quartus(qip_path) "core_bridge_cmd.v"]
 set_global_assignment -name SDC_FILE                  [file join $::quartus(qip_path) "core_constraints.sdc"]

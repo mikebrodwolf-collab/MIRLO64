@@ -61,12 +61,15 @@ module mirlo_regs (
     input  wire         pad_clk, pad_we,
     input  wire  [3:0]  pad_wa,
     input  wire  [31:0] pad_wd,
+    input  wire         psx_enable,
+    input  wire  [15:0] psx_buttons,
+    input  wire  [31:0] psx_joy,
     // APF interact
     input  wire  [4:0]  ia_address,
     input  wire  [31:0] ia_data,
     input  wire         ia_wr,
     output logic [31:0] ia_q,
-    output wire  [2:0]  ia_an_mode,         // interact: the Analogizer's video (field 16: 0 off, 1 RGBS, 2 RGsB, 3 YPbPr, 4 Y/C NTSC, 5 Y/C PAL, 6 RGBHV; a larger value, from a build that had scanlines, 7..9, or a 10: mode 0), INTERACT2's bits 13:10 (the runtime's: "Analogizer controllers"), and its bit 31, which the
+    output wire  [3:0]  ia_an_mode,         // interact: the Analogizer's video (field 16: 0 off, 1 RGBS, 2 RGsB, 3 YPbPr, 4 Y/C NTSC, 5 Y/C PAL, 6 RGBHV; a larger value, from a build that had scanlines, 7..9, or a 10: mode 0), INTERACT2's bits 13:10 (the runtime's: "Analogizer controllers"), and its bit 31, which the
     output wire         ia_an_own,          //   runtime sets: the adapter owns the port (docs/analogizer.md)
     output wire  [4:0]  ia_crop_v,          // interact: "Crop Vertical" (lines; field 3) and "Crop Right" (pixels; field 5)
     output wire  [1:0]  ia_crop_r,          // ("Crop Horizontal", field 5: [1:0] columns at the right, [3:2] at the left)
@@ -239,7 +242,7 @@ assign ia_crop_l = ia0[18:17];
 assign ia_out32  = ia2[5];
 assign ia_deblur = ia2[6];
 wire [3:0] ia_an_video = ia2[3:0];
-assign ia_an_mode = ia_an_video >= 4'd7 ? 3'd0 : ia_an_video[2:0];     // (a value no entry has: the DAC as with Off)
+assign ia_an_mode = {ia2[14], (ia_an_video >= 4'd7 ? 3'd0 : ia_an_video[2:0])};     // (a value no entry has: the DAC as with Off)
 assign ia_an_own  = ia2[31];
 always_ff @(posedge clk) begin
     if (rst) begin ia0 <= 0; ia1 <= 0; ia2 <= 0; ia_ch0 <= 0; ia_ch1 <= 0; end
@@ -475,7 +478,12 @@ end
 logic [31:0] pad_q;
 initial for (int k = 0; k < 16; k++) pad_ram[k] = 32'd0;
 always_ff @(posedge pad_clk) if (pad_we) pad_ram[pad_wa] <= pad_wd;
-always_ff @(posedge clk) pad_q <= pad_ram[a[5:2]];
+always_ff @(posedge clk) begin
+    if (psx_enable && a[5:2] == 4'd0) pad_q <= {4'h3, 12'd0, psx_buttons};
+    else if (psx_enable && a[5:2] == 4'd4) pad_q <= psx_joy;
+    else if (psx_enable && a[5:2] == 4'd8) pad_q <= 32'd0;
+    else pad_q <= pad_ram[a[5:2]];
+end
 // The rest: the map's banks are a[11:8], a register's word in its bank a[5:2] (a[15:12] and a[7:6] are 0 for every register).
 // An address that names no register reads 0.
 logic [31:0] rb [16];

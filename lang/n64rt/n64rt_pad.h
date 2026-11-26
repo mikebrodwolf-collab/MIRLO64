@@ -82,6 +82,8 @@
 #define KEY_R1     (1u << 9)
 #define KEY_L2     (1u << 10)
 #define KEY_R2     (1u << 11)
+#define KEY_L3     (1u << 12)
+#define KEY_R3     (1u << 13)
 #define KEY_SELECT (1u << 14)
 #define KEY_START  (1u << 15)
 #define KEY_TYPE(k) ((k) >> 28)          /* 1 Pocket, 2 dock pad without analog, 3 dock pad with analog */
@@ -166,6 +168,8 @@ static inline void n64rt_pad_map(uint32_t k, uint32_t j, uint32_t set0, uint32_t
         k &= ~skey;                                                   /* (the Start's key is that only) */
     }
     if (k & KEY_R2) b |= CONT_E;                                      /* C-up (the Controls menu's, on ZR) */
+    if (k & KEY_R3) b |= CONT_E;                                      /* DualShock R3 (N64 has no stick-click button) */
+    if (k & KEY_L3) b |= CONT_D;                                      /* DualShock L3 (N64 has no stick-click button) */
     if (k & KEY_A) b |= CONT_A;
     if (k & KEY_B) b |= CONT_B;
     if (k & KEY_L1) b |= CONT_G;                                              /* Z (the Controls menu's) */

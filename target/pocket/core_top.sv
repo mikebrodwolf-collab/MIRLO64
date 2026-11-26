@@ -252,7 +252,8 @@ module core_top (
   // harness raise them). Nothing is ever driven high but the other bits of bank 0 during a low pulse of one of its lines (bank 0 has one
   // direction for all its bits): docs/analogizer.md, "The SNAC port as the console's PIF".
   wire        an_own;
-  wire [2:0]  an_mode;
+  wire [3:0]  an_mode;
+  wire [2:0]  an_video_mode = an_mode[2:0];
   wire [7:0]  an_bank3, an_bank2;
   wire [4:0]  an_bank1_b;
   wire        an_vid_woven_s;         // (the scan-out's, clk_vid)
@@ -260,28 +261,48 @@ module core_top (
   always_ff @(posedge clk_vid) an_vid_woven <= an_vid_woven_s;
   // the settings are the SoC's (clk_sys) and hardly ever change: two flip-flops into the video clock
   logic [2:0] an_mode_s1, an_mode_s2;
-  always_ff @(posedge clk_vid) begin an_mode_s1 <= an_mode; an_mode_s2 <= an_mode_s1; end
-  wire        an_en = an_own && an_mode != 3'd0;      // (the adapter drives banks 1-3; sys-side level: it changes with the settings only)
+  always_ff @(posedge clk_vid) begin an_mode_s1 <= an_video_mode; an_mode_s2 <= an_mode_s1; end
+  wire        an_en = an_own && an_video_mode != 3'd0; // video DAC banks 1-3
   wire        sn_en;                                  // the Joybus has the SNAC pins (it needs `an_own`)
   wire        sn_p30_dir, sn_p30_oe, sn_p31_dir, sn_p31_oe, sn_b0_dir, sn_b0_oe;
   wire  [3:0] sn_b0_o;
+
+  // PlayStation mode is INTERACT2[14] (menu value 16), exclusive of N64 Joybus SNAC.
+  // Analogizer R.1 Config B: ATT1/2 on bank1[6:7], CLK/CMD on pins 30/31,
+  // DAT/ACK/IRQ10 on bank0[7:5]. The video continues on bank1[5:0], bank2 and bank3.
+  wire        psx_enable = an_own && an_mode[3] && !sn_en;
+  wire        psx_clk, psx_cmd, psx_att1, psx_att2, psx_updated;
+  wire [15:0] psx_buttons;
+  wire [31:0] psx_joy;
+  wire [15:0] psx_buttons_sync;
+  wire [31:0] psx_joy_sync;
+  an_psx_dualshock #(.MASTER_CLK_FREQ(74_250_000)) psx_controller (
+      .clk(clk_74a), .enable(psx_enable),
+      .psx_dat(cart_tran_bank0[7]), .psx_ack(cart_tran_bank0[6]),
+      .psx_clk(psx_clk), .psx_cmd(psx_cmd), .psx_att1(psx_att1), .psx_att2(psx_att2),
+      .buttons(psx_buttons), .joy(psx_joy), .updated(psx_updated)
+  );
+  synch_3 #(.WIDTH(48)) psx_pad_synchronizer (
+      {psx_buttons, psx_joy}, {psx_buttons_sync, psx_joy_sync}, clk_sys
+  );
+
   assign cart_tran_bank3         = an_own ? (an_en ? an_bank3 : 8'hzz) : gb_a_oe ? gb_a[7:0] : 8'hzz;
   assign cart_tran_bank3_dir     = an_own ? an_en : gb_a_dir;
   assign cart_tran_bank2         = an_own ? (an_en ? an_bank2 : 8'hzz) : gb_a_oe ? gb_a[15:8] : 8'hzz;
   assign cart_tran_bank2_dir     = an_own ? an_en : gb_a_dir;
-  assign cart_tran_bank1         = an_own ? (an_en ? {2'b00, clk_vid_90deg, an_bank1_b} : 8'hzz) : gb_d_oe ? gb_d_o : 8'hzz;
-  assign cart_tran_bank1_dir     = an_own ? an_en : gb_d_dir;
+  assign cart_tran_bank1         = an_own ? ((an_en || psx_enable) ? {psx_enable ? psx_att2 : 1'b0, psx_enable ? psx_att1 : 1'b0, an_en ? clk_vid_90deg : 1'b0, an_en ? an_bank1_b : 5'd0} : 8'hzz) : gb_d_oe ? gb_d_o : 8'hzz;
+  assign cart_tran_bank1_dir     = an_own ? (an_en || psx_enable) : gb_d_dir;
   // bank 0: the cartridge's PHI, /WR, /RD and /CS (idle high), or the Joybus's: released (an input) but for a low pulse of port 3 or 4, when
   // the bank is an output with the pulsed bit 0 and the others 1 (sn_b0_o)
-  assign cart_tran_bank0         = sn_en ? (sn_b0_oe ? sn_b0_o : 4'bzzzz) : {gb_phi, gb_wr_n, gb_rd_n, gb_cs_n};
-  assign cart_tran_bank0_dir     = sn_en ? sn_b0_dir : 1'b1;
-  // pin 30: /RES of a cartridge, or port 1 (its data pin is 0 and only its direction and driver come and go: open drain)
-  assign cart_tran_pin30         = sn_en ? (sn_p30_oe ? 1'b0 : 1'bz) : 1'b0;
-  assign cart_tran_pin30_dir     = sn_en ? sn_p30_dir : gb_on ? 1'b0 : 1'bz;   // (off: as the template leaves it)
-  assign cart_pin30_pwroff_reset = an_own ? (an_en || sn_en) : gb_on;           // (the clamp that holds pin 30 low is released for the Joybus)
-  // pin 31: VIN of a cartridge (never driven), or port 2
-  assign cart_tran_pin31         = sn_en && sn_p31_oe ? 1'b0 : 1'bz;
-  assign cart_tran_pin31_dir     = sn_en ? sn_p31_dir : 1'b0;
+  assign cart_tran_bank0         = psx_enable ? 4'bzzzz : sn_en ? (sn_b0_oe ? sn_b0_o : 4'bzzzz) : {gb_phi, gb_wr_n, gb_rd_n, gb_cs_n};
+  assign cart_tran_bank0_dir     = psx_enable ? 1'b0 : sn_en ? sn_b0_dir : 1'b1;
+  // pin 30: cartridge reset, N64 Joybus port 1, or PlayStation clock (Config B)
+  assign cart_tran_pin30         = psx_enable ? psx_clk : sn_en ? (sn_p30_oe ? 1'b0 : 1'bz) : 1'b0;
+  assign cart_tran_pin30_dir     = psx_enable ? 1'b1 : sn_en ? sn_p30_dir : gb_on ? 1'b0 : 1'bz;
+  assign cart_pin30_pwroff_reset = an_own ? (an_en || sn_en || psx_enable) : gb_on;
+  // pin 31: cartridge VIN, N64 Joybus port 2, or PlayStation command (Config B)
+  assign cart_tran_pin31         = psx_enable ? psx_cmd : sn_en && sn_p31_oe ? 1'b0 : 1'bz;
+  assign cart_tran_pin31_dir     = psx_enable ? 1'b1 : sn_en ? sn_p31_dir : 1'b0;
 
   // link port is input only
   assign port_tran_so            = 1'bz;
@@ -1034,6 +1055,9 @@ module core_top (
       .apf_pad_we(pad_we),
       .apf_pad_wa(pad_wa),
       .apf_pad_wd(pad_wd),
+      .apf_psx_enable(psx_enable),
+      .apf_psx_buttons(psx_buttons_sync),
+      .apf_psx_joy(psx_joy_sync),
 
       .apf_interact_address(interact_addr[4:0]),
       .apf_interact_data(interact_data),
