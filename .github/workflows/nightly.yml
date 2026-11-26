@@ -12,8 +12,6 @@
 name: Nightly
 
 on:
-  push:
-    branches: [psx-dualshock-experiment]
   schedule:
     # midnight in Madrid, summer and winter time (GitHub may start a scheduled run late)
     - cron: '0 0 * * *'
