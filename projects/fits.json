@@ -3,10 +3,7 @@
   "sources": "45d0130d6c6f4d8dccb795642d0ebc123589a50b828935ec99c07bbec0ae0ce1",
   "fits": [
     {
-      "seed": 13,
-      "worst_slack_ns": 0,
-      "alms": 0,
-      "date": "2026-11-26"
+      "seed": 13
     }
   ]
 }
