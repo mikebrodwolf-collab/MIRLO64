@@ -59,8 +59,9 @@ jobs:
       - name: Detailed timing paths
         if: always() && hashFiles('projects_a2_probe/output_files/mirlo.sta.summary') != ''
         run: |
-          sed 's/projects_a2_nightly/projects_a2_probe/g' tools/area2/report_timing.tcl > "$RUNNER_TEMP/report_probe.tcl"
-          "$QUARTUS_BIN/quartus_sta" -t "$RUNNER_TEMP/report_probe.tcl" > projects_a2_probe_timing.log 2>&1
+          sed 's/projects_a2_nightly/projects_a2_probe/g' tools/area2/report_timing.tcl > "$GITHUB_WORKSPACE/report_probe.tcl"
+          "$QUARTUS_BIN/quartus_sta" -t "$GITHUB_WORKSPACE/report_probe.tcl" > projects_a2_probe_timing.log 2>&1
+          rm -f "$GITHUB_WORKSPACE/report_probe.tcl"
 
       - name: Upload timing reports
         if: always()
