@@ -45,6 +45,9 @@ jobs:
           chmod +x "$RUNNER_TEMP/quartus/quartus_sh" "$RUNNER_TEMP/quartus/quartus_sta"
           echo "QUARTUS_BIN=$RUNNER_TEMP/quartus" >> "$GITHUB_ENV"
 
+      - name: Generate RTL initialization includes
+        run: python3 tools/mips_inits.py
+
       - name: Compile FPGA and check timing
         id: fit
         run: |
