@@ -39,17 +39,6 @@ module an_psx_dualshock #(
         endcase
     endfunction
     assign next_command_byte=command_byte(byte_index);
-    function automatic [15:0] decode_buttons(input [7:0] lo,input [7:0] hi);
-        reg [15:0] k;
-        begin
-            k=0;
-            k[0]=~lo[4]; k[1]=~lo[6]; k[2]=~lo[7]; k[3]=~lo[5];
-            k[4]=~hi[6]; k[5]=~hi[5]; k[6]=~hi[7]; k[7]=~hi[4];
-            k[8]=~hi[2]; k[9]=~hi[3]; k[10]=~hi[0]; k[11]=~hi[1];
-            k[12]=~lo[1]; k[13]=~lo[2]; k[14]=~lo[0]; k[15]=~lo[3];
-            decode_buttons=k;
-        end
-    endfunction
     always_ff @(posedge clk) begin
         updated<=0;
         if(!enable) begin
