@@ -2219,7 +2219,7 @@ always_ff @(posedge clk) begin
         m_shw2 <= m_shwait;
         if (XUA && m_k_ua && m_st && sh_on && !m_adv) m_st_lo <= sh_r[63:32];
         // a d-shift: the value in, then a byte or a bit a cycle
-        if (flush || m_adv) begin sh_on <= 1'b0; end
+        if (flush || m_adv) begin if (sh_on) sh_on <= 1'b0; end
         else if (XUA && m_k_ua && m_st && (m_w0 || (m_sw_push && ms == MS_SLOW_A))) begin
             sh_n <= 7'd32; m_shwait <= 1'b1;                        // (sdl, sdr: the first word is out; the second is the next four bytes)
         end
