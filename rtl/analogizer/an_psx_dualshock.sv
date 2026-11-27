@@ -9,7 +9,6 @@ module an_psx_dualshock #(
     output logic psx_clk = 1'b1, psx_cmd = 1'b1,
     output logic psx_att1 = 1'b1, psx_att2 = 1'b1,
     output logic [15:0] buttons = 16'd0,
-    output logic [31:0] joy = 32'h8080_8080,
     output logic updated = 1'b0
 );
     localparam integer HALF_PERIOD = MASTER_CLK_FREQ / 250_000;
@@ -28,7 +27,7 @@ module an_psx_dualshock #(
     logic [3:0] byte_index=0;
     logic [2:0] bit_index=0;
     logic [7:0] tx_byte=8'h01, rx_shift=0;
-    logic rx_valid=0, rx_analog=0;
+    logic rx_valid=0;
     wire [7:0] sampled_byte={psx_dat,rx_shift[6:0]};
     wire [7:0] next_command_byte;
     function automatic [7:0] command_byte(input [3:0] index);
@@ -43,16 +42,16 @@ module an_psx_dualshock #(
         updated<=0;
         if(!enable) begin
             state<=ST_IDLE; timer<=0; poll_timer<=0; byte_index<=0; bit_index<=0;
-            tx_byte<=8'h01; rx_shift<=0; rx_valid<=0; rx_analog<=0;
+            tx_byte<=8'h01; rx_shift<=0; rx_valid<=0;
             psx_clk<=1; psx_cmd<=1; psx_att1<=1; psx_att2<=1;
-            buttons<=0; joy<=32'h8080_8080;
+            buttons<=0;
         end else begin
             case(state)
                 ST_IDLE: begin
                     psx_clk<=1; psx_cmd<=1; psx_att1<=1; psx_att2<=1;
                     if(poll_timer>=POLL_PERIOD-1) begin
                         poll_timer<=0; byte_index<=0; bit_index<=0; tx_byte<=8'h01; rx_shift<=0;
-                        rx_valid<=0; rx_analog<=0;
+                        rx_valid<=0;
                         psx_att1<=0; timer<=START_DELAY-1; state<=ST_START;
                     end else poll_timer<=poll_timer+1'b1;
                 end
@@ -68,7 +67,6 @@ module an_psx_dualshock #(
                         case(byte_index)
                             1: begin
                                 rx_valid <= sampled_byte==8'h41 || sampled_byte==8'h73 || sampled_byte==8'h79 || sampled_byte==8'h53;
-                                rx_analog <= sampled_byte==8'h73 || sampled_byte==8'h79 || sampled_byte==8'h53;
                             end
                             3: if(rx_valid) begin
                                 buttons[0]<=~sampled_byte[4]; buttons[1]<=~sampled_byte[6];
@@ -82,16 +80,10 @@ module an_psx_dualshock #(
                                 buttons[8]<=~sampled_byte[2]; buttons[9]<=~sampled_byte[3];
                                 buttons[10]<=~sampled_byte[0]; buttons[11]<=~sampled_byte[1];
                             end
-                            5: if(rx_valid && rx_analog) joy[7:0]<=sampled_byte;
-                            6: if(rx_valid && rx_analog) joy[15:8]<=sampled_byte;
-                            7: if(rx_valid && rx_analog) joy[23:16]<=sampled_byte;
-                            8: if(rx_valid && rx_analog) joy[31:24]<=sampled_byte;
                             default: ;
                         endcase
-                        if(byte_index==8) begin
-                            if(!rx_valid) begin
-                                buttons<=0; joy<=32'h8080_8080;
-                            end else if(!rx_analog) joy<=32'h8080_8080;
+                        if(byte_index==4) begin
+                            if(!rx_valid) buttons<=0;
                             psx_att1<=1; psx_cmd<=1; updated<=1; state<=ST_IDLE;
                         end else begin
                             byte_index<=byte_index+1'b1; timer<=BYTE_GAP-1; state<=ST_GAP;
