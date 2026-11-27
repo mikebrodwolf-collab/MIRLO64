@@ -1731,7 +1731,7 @@ wire f_have = f_ok && (fs == FS_READY || (fs == FS_RUN && ((FAST ? f_cx : f_hit)
 // Give fetch its own M-ready cone. Keep the late FPU busy flag at the
 // end of this local acceptance expression instead of sending it through
 // m_done_f's high-fanout shared pipeline-control net before reaching f_pc.
-wire f_m_ready = !m_valid || (m_done_x &&
+(* keep = "true" *) wire f_m_ready = !m_valid || (m_done_x &&
                   !(m_is_md && md_busy) &&
                   (ms != MS_REFILL) && (ms != MS_REREAD) &&
                   !m_shwait &&
