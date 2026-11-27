@@ -2,18 +2,12 @@ name: Timing Probe
 
 on:
   workflow_dispatch:
-    inputs:
-      seed:
-        description: "Quartus fitter seed to test"
-        required: true
-        default: "41"
-        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: timing-probe-${{ github.ref }}-${{ inputs.seed }}
+  group: timing-probe-${{ github.ref }}-${{ matrix.seed }}
   cancel-in-progress: false
 
 env:
@@ -22,6 +16,10 @@ env:
 
 jobs:
   timing:
+    strategy:
+      fail-fast: false
+      matrix:
+        seed: [41, 13, 20]
     runs-on: ubuntu-24.04
     timeout-minutes: 180
     steps:
@@ -48,7 +46,7 @@ jobs:
       - name: Compile FPGA and check timing
         id: fit
         run: |
-          WAIT=1 tools/area2/fit.sh probe "${{ inputs.seed }}"
+          WAIT=1 tools/area2/fit.sh probe "${{ matrix.seed }}"
           tools/fits.py verify projects_a2_probe
 
       - name: Detailed timing paths
@@ -61,7 +59,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: timing-probe-${{ github.run_id }}
+          name: timing-probe-seed-${{ matrix.seed }}-${{ github.run_id }}
           path: |
             projects_a2_probe.compile.log
             projects_a2_probe/output_files/*.summary
