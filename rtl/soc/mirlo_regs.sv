@@ -63,7 +63,6 @@ module mirlo_regs (
     input  wire  [31:0] pad_wd,
     input  wire         psx_enable,
     input  wire  [15:0] psx_buttons,
-    input  wire  [31:0] psx_joy,
     // APF interact
     input  wire  [4:0]  ia_address,
     input  wire  [31:0] ia_data,
@@ -479,8 +478,8 @@ logic [31:0] pad_q;
 initial for (int k = 0; k < 16; k++) pad_ram[k] = 32'd0;
 always_ff @(posedge pad_clk) if (pad_we) pad_ram[pad_wa] <= pad_wd;
 always_ff @(posedge clk) begin
-    if (psx_enable && a[5:2] == 4'd0) pad_q <= {4'h3, 12'd0, psx_buttons};
-    else if (psx_enable && a[5:2] == 4'd4) pad_q <= psx_joy;
+    if (psx_enable && a[5:2] == 4'd0) pad_q <= {4'h2, 12'd0, psx_buttons};
+    else if (psx_enable && a[5:2] == 4'd4) pad_q <= 32'd0;
     else if (psx_enable && a[5:2] == 4'd8) pad_q <= 32'd0;
     else pad_q <= pad_ram[a[5:2]];
 end
