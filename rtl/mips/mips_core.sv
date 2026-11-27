@@ -1728,7 +1728,9 @@ wire f_hit_k = f_ok && f_cached && !f_misal && ic_tq[ITW] && ic_tq[ITW-1:0] == f
 wire f_hit_m = f_xmap && f_ok && !f_misal && ic_tq[ITW] && ((f_mhit0 && ic_tq[ITW-1:0] == pg0_tag) || (f_mhit1 && ic_tq[ITW-1:0] == pg1_tag));
 wire f_hit = f_hit_k || f_hit_m;
 wire f_have = f_ok && (fs == FS_READY || (fs == FS_RUN && ((FAST ? f_cx : f_hit) || f_misal)));
-wire f_take = !d_valid || d_adv;
+// The fetch only needs D's acceptance condition. Bypass the shared d_adv
+// net here so the late M completion signal has a shorter, local path to f_pc.
+wire f_take = !d_valid || (!m_stall && !d_stall);
 // (FAST) the fetch went the wrong way behind the delay slot: to rd_tgt now
 wire b_redir = FAST && rd_res && rd_fix && !ds_next;
 wire [31:0] rd_tgt = rd_tk ? rd_tt : rd_tn;
