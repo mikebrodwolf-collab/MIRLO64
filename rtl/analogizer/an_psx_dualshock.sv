@@ -2,6 +2,7 @@
 // Standard poll: host 01 42 00 00 00 00 00 00 00 (LSB first).
 // SCLK idles high; CMD changes while high and DAT is sampled on rising edges.
 `default_nettype none
+(* altera_attribute = "-name SAFE_STATE_MACHINE OFF" *)
 module an_psx_dualshock #(
     parameter integer MASTER_CLK_FREQ = 74_250_000
 ) (
