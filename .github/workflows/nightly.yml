@@ -54,6 +54,11 @@ jobs:
           exec docker run --rm -v "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE" -w "$PWD" "$QUARTUS_IMAGE" "$QUARTUS_IN_IMAGE/quartus_sh" "$@"
           SH
           chmod +x "$RUNNER_TEMP/quartus/quartus_sh"
+          cat > "$RUNNER_TEMP/quartus/quartus_sta" <<'SH'
+          #!/bin/sh
+          exec docker run --rm -v "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE" -w "$PWD" "$QUARTUS_IMAGE" "$QUARTUS_IN_IMAGE/quartus_sta" "$@"
+          SH
+          chmod +x "$RUNNER_TEMP/quartus/quartus_sta"
           echo "QUARTUS_BIN=$RUNNER_TEMP/quartus" >> "$GITHUB_ENV"
           "$RUNNER_TEMP/quartus/quartus_sh" --version
           df -h / | tail -1
@@ -75,6 +80,11 @@ jobs:
           path: ${{ runner.temp }}/sd
           retention-days: 14
           if-no-files-found: error
+
+      - name: Detailed timing paths, if the fit fails
+        if: failure()
+        run: |
+          "$QUARTUS_BIN/quartus_sta" -t tools/area2/report_timing.tcl || true
 
       - name: The compile's log and reports, if it failed
         if: failure()
