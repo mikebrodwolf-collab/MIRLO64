@@ -16,9 +16,15 @@ module an_psx_dualshock #(
     localparam integer START_DELAY = MASTER_CLK_FREQ / 100_000;
     localparam integer BYTE_GAP = MASTER_CLK_FREQ / 200_000;
     localparam integer POLL_PERIOD = MASTER_CLK_FREQ / 60;
+    // Keep the counters only as wide as their actual maximum values. The
+    // serial timer never exceeds START_DELAY-1; the poll timer counts to
+    // POLL_PERIOD-1. Wide 32-bit decrementers needlessly consume FPGA logic.
+    localparam integer TIMER_WIDTH = $clog2(START_DELAY + 1);
+    localparam integer POLL_TIMER_WIDTH = $clog2(POLL_PERIOD);
     localparam [2:0] ST_IDLE=0, ST_START=1, ST_LOW=2, ST_HIGH=3, ST_GAP=4;
     logic [2:0] state=ST_IDLE;
-    logic [31:0] timer=0, poll_timer=0;
+    logic [TIMER_WIDTH-1:0] timer=0;
+    logic [POLL_TIMER_WIDTH-1:0] poll_timer=0;
     logic [3:0] byte_index=0;
     logic [2:0] bit_index=0;
     logic [7:0] tx_byte=8'h01, rx_shift=0, rx_id=8'hFF;
