@@ -1271,7 +1271,7 @@ logic [31:0] fpu_gpr_out, fpu_gpr_out_hi;
 logic [63:0] fpu_mem_out;
 // (FAST: what kind of instruction it is, registered with it)
 logic m_ldw;                                 // (FAST: a load whose value is m_ld_val: not ldl, ldr)
-logic m_k_ld, m_k_st, m_k_wide, m_k_fwide, m_k_cach, m_k_cw, m_k_mapped, m_k_md, m_k_fpu, m_k_sbeq;
+logic m_k_ld, m_k_st, m_k_wide, m_k_fwide, m_k_cach, m_k_mapped, m_k_md, m_k_fpu, m_k_sbeq;
 logic [3:0] m_k_sstrb; logic m_k_sfs, m_k_ssd;      // (FAST: a store of the FPU's word, of a doubleword)
 wire m_ld = FAST ? m_k_ld : m_c.ld != M_NONE, m_st = FAST ? m_k_st : m_c.st != S_NONE, m_mem = m_ld || m_st;
 // (FAST: what kind of address it is, registered with it)
@@ -1320,7 +1320,7 @@ wire m_lhit = !FAST ? m_dc_hit : m_dly ? m_w1 && m_hit_r : 1'b1;
 // one cycle, its second in the next (m_ph). Both are in one line (it is
 // aligned), so the first's hit is the second's. A load's first word waits in
 // ms_data; a store's goes into the cache and the write buffer as it is done.
-wire m_cw = FAST ? m_k_cw : m_wide && m_cached;
+wire m_cw = m_wide && m_cached;
 wire m_w0;
 
 logic [63:0] ms_data;                       // the slow path's read (high word = the lower address)
@@ -2257,7 +2257,7 @@ always_ff @(posedge clk) begin
                 m_f_kseg <= kseg01(e_ea, game_view); m_f_devk <= pa_dev(kphys(e_ea));
                 m_k_ld <= e_c.ld != M_NONE; m_k_st <= e_c.st != S_NONE; m_ldw <= e_c.ld != M_NONE && !e_ua; m_k_sc <= e_c.st == S_SC;
                 m_k_fwide <= e_fwide; m_k_wide <= e_fwide || (W64 && (e_c.ld == M_LD || e_c.st == S_SD)) || e_ua;
-                m_k_cach <= cacheable(e_ea, game_view); m_k_cw <= (e_fwide || (W64 && (e_c.ld == M_LD || e_c.st == S_SD)) || e_ua) && cacheable(e_ea, game_view); m_k_mapped <= e_mem && !kseg01(e_ea, game_view);
+                m_k_cach <= cacheable(e_ea, game_view); m_k_mapped <= e_mem && !kseg01(e_ea, game_view);
                 m_k_md <= e_c.md != MD_NONE; m_k_fpu <= e_c.cop1 || e_c.ld == M_FL || e_c.st == S_FS;
                 m_k_sbeq <= m_cst_idx == {e_ea[DW+1:3], e_ea[2] && !e_ua};   // (it is behind the store that is at M now; its read, dc_raddr's)
                 m_k_sstrb <= e_sstrb; m_k_sfs <= e_c.st == S_FS; m_k_ssd <= e_c.st == S_SD;
