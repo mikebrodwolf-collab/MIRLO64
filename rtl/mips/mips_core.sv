@@ -1595,8 +1595,14 @@ wire  [CK_W:0] ck_last = ck_dalias ? (CK_W + 1)'((1 << CK_WD) - 1) : ck_isw ? (C
 // (FAST: the same, with what comes latest -- the write buffer's full, the FPU's and the multiplier's busy, a shift on -- ANDed last, not as
 // the overrides of a chain: m_done is a few levels of M's registers, wb_full and the busy flags entering the last)
 wire m_wbsel = !m_cl && !(m_c.tlbp || m_c.tlbr) && m_st && (m_cw || (!m_needs_slow && !m_sc_fail));      // (a store whose completion waits for the buffer)
-wire m_done_b = m_cw ? m_ph : (m_ld && m_cached) ? (ms == MS_DONE || (ms == MS_IDLE && m_lhit)) : m_needs_slow ? ms == MS_DONE : 1'b1;
-wire m_done_x = (m_c.tlbp || m_c.tlbr) ? ms == MS_DONE : m_cl ? ms == MS_DONE : (m_mapped && (ms == MS_IDLE || ms == MS_WALK)) ? 1'b0 : m_done_b;
+wire m_done_special = m_c.tlbp || m_c.tlbr || m_cl;
+wire m_done_load = m_ld && m_cached;
+wire m_done_wait_map = m_mapped && (ms == MS_IDLE || ms == MS_WALK);
+wire m_done_x = (m_done_special && ms == MS_DONE) ||
+                (!m_done_special && !m_done_wait_map &&
+                 ((m_cw && m_ph) ||
+                  (!m_cw && m_done_load && (ms == MS_DONE || (ms == MS_IDLE && m_lhit))) ||
+                  (!m_cw && !m_done_load && (!m_needs_slow || ms == MS_DONE))));
 // Keep the independent stall sources as parallel terms. In particular, do
 // not put the FPU's completion flag through a shared OR tree before the
 // pipeline-advance path: that flag is a late-arriving input to f_pc.
