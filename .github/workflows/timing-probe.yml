@@ -46,7 +46,9 @@ jobs:
           echo "QUARTUS_BIN=$RUNNER_TEMP/quartus" >> "$GITHUB_ENV"
 
       - name: Generate RTL initialization includes
-        run: python3 tools/mips_inits.py
+        run: |
+          python3 tools/mips_inits.py
+          python3 sim/rsp/make_div_rom.py rtl/rsp/rsp_div_rom.hex
 
       - name: Compile FPGA and check timing
         id: fit
