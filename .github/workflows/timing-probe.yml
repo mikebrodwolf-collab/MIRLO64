@@ -6,16 +6,15 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: timing-probe-${{ github.ref }}-${{ matrix.seed }}
-  cancel-in-progress: false
-
 env:
   QUARTUS_IMAGE: docker.io/chriz2600/quartus-lite@sha256:50eac410e54617e93ad6c13d9129f7e52c89108a819ded31e66d1eb4577cd8ef
   QUARTUS_IN_IMAGE: /opt/intelFPGA_lite/23.1/quartus/bin
 
 jobs:
   timing:
+    concurrency:
+      group: timing-probe-${{ github.ref }}-${{ matrix.seed }}
+      cancel-in-progress: false
     strategy:
       fail-fast: false
       matrix:
