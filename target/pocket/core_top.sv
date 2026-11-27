@@ -273,17 +273,15 @@ module core_top (
   wire        psx_enable = an_own && an_mode[3] && !sn_en;
   wire        psx_clk, psx_cmd, psx_att1, psx_att2, psx_updated;
   wire [15:0] psx_buttons;
-  wire [31:0] psx_joy;
   wire [15:0] psx_buttons_sync;
-  wire [31:0] psx_joy_sync;
   an_psx_dualshock #(.MASTER_CLK_FREQ(74_250_000)) psx_controller (
       .clk(clk_74a), .enable(psx_enable),
       .psx_dat(cart_tran_bank0[7]), .psx_ack(cart_tran_bank0[6]),
       .psx_clk(psx_clk), .psx_cmd(psx_cmd), .psx_att1(psx_att1), .psx_att2(psx_att2),
-      .buttons(psx_buttons), .joy(psx_joy), .updated(psx_updated)
+      .buttons(psx_buttons), .updated(psx_updated)
   );
-  synch_3 #(.WIDTH(48)) psx_pad_synchronizer (
-      {psx_buttons, psx_joy}, {psx_buttons_sync, psx_joy_sync}, clk_sys
+  synch_3 #(.WIDTH(16)) psx_pad_synchronizer (
+      psx_buttons, psx_buttons_sync, clk_sys
   );
 
   assign cart_tran_bank3         = an_own ? (an_en ? an_bank3 : 8'hzz) : gb_a_oe ? gb_a[7:0] : 8'hzz;
@@ -1057,7 +1055,6 @@ module core_top (
       .apf_pad_wd(pad_wd),
       .apf_psx_enable(psx_enable),
       .apf_psx_buttons(psx_buttons_sync),
-      .apf_psx_joy(psx_joy_sync),
 
       .apf_interact_address(interact_addr[4:0]),
       .apf_interact_data(interact_data),
