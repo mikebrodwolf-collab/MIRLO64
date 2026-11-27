@@ -1536,7 +1536,9 @@ wire m_tlbx = TLB_EN && ((!m_exc_v && m_tlb_fault && !m_tdev) || (m_exc_v && (m_
 // the runtime's to fill); nothing already in it
 wire m_mon_int = MON && (FAST ? int_mon_r : int_mon);
 wire m_to_mon  = MON && mon_game && !c0_status[2] &&
-                 (m_take_int ? m_mon_int : (m_take_exc && (m_exc_v ? (m_dev || m_exc_code == 5'd10 || (TLB_RAM && m_exc_code == 5'd2)) : (TLB_RAM || m_tdev))));   // (TLB_EN: a TLB exception is the game's)
+                 ((m_take_int && m_mon_int) ||
+                  (!m_take_int && m_take_exc &&
+                   (m_exc_v ? (m_dev || m_exc_code == 5'd10 || (TLB_RAM && m_exc_code == 5'd2)) : (TLB_RAM || m_tdev))));   // (TLB_EN: a TLB exception is the game's)
 // a translation fault (a fetch's, code 2 from E, or an access's, found here) that the monitor level takes
 wire m_tr_mon  = TLB_RAM && m_to_mon && m_take_exc && (!m_exc_v || m_exc_code == 5'd2);
 wire m_live = m_valid && !m_take_int && !m_exc_v && !m_tlb_fault;
