@@ -27,10 +27,8 @@ module an_psx_dualshock #(
     logic [POLL_TIMER_WIDTH-1:0] poll_timer=0;
     logic [3:0] byte_index=0;
     logic [2:0] bit_index=0;
-    logic [7:0] tx_byte=8'h01, rx_shift=0, rx_id=8'hFF;
-    logic [7:0] rx_buttons_lo=8'hFF, rx_buttons_hi=8'hFF;
-    logic [7:0] rx_right_x=8'h80, rx_right_y=8'h80;
-    logic [7:0] rx_left_x=8'h80, rx_left_y=8'h80;
+    logic [7:0] tx_byte=8'h01, rx_shift=0;
+    logic rx_valid=0, rx_analog=0;
     wire [7:0] sampled_byte={psx_dat,rx_shift[6:0]};
     wire [7:0] next_command_byte;
     function automatic [7:0] command_byte(input [3:0] index);
@@ -56,9 +54,7 @@ module an_psx_dualshock #(
         updated<=0;
         if(!enable) begin
             state<=ST_IDLE; timer<=0; poll_timer<=0; byte_index<=0; bit_index<=0;
-            tx_byte<=8'h01; rx_shift<=0; rx_id<=8'hFF;
-            rx_buttons_lo<=8'hFF; rx_buttons_hi<=8'hFF;
-            rx_right_x<=8'h80; rx_right_y<=8'h80; rx_left_x<=8'h80; rx_left_y<=8'h80;
+            tx_byte<=8'h01; rx_shift<=0; rx_valid<=0; rx_analog<=0;
             psx_clk<=1; psx_cmd<=1; psx_att1<=1; psx_att2<=1;
             buttons<=0; joy<=32'h8080_8080;
         end else begin
@@ -67,8 +63,7 @@ module an_psx_dualshock #(
                     psx_clk<=1; psx_cmd<=1; psx_att1<=1; psx_att2<=1;
                     if(poll_timer>=POLL_PERIOD-1) begin
                         poll_timer<=0; byte_index<=0; bit_index<=0; tx_byte<=8'h01; rx_shift<=0;
-                        rx_id<=8'hFF; rx_buttons_lo<=8'hFF; rx_buttons_hi<=8'hFF;
-                        rx_right_x<=8'h80; rx_right_y<=8'h80; rx_left_x<=8'h80; rx_left_y<=8'h80;
+                        rx_valid<=0; rx_analog<=0;
                         psx_att1<=0; timer<=START_DELAY-1; state<=ST_START;
                     end else poll_timer<=poll_timer+1'b1;
                 end
@@ -82,24 +77,32 @@ module an_psx_dualshock #(
                     psx_clk<=1; rx_shift[bit_index]<=psx_dat;
                     if(bit_index==7) begin
                         case(byte_index)
-                            1: rx_id<=sampled_byte;
-                            3: rx_buttons_lo<=sampled_byte;
-                            4: rx_buttons_hi<=sampled_byte;
-                            5: rx_right_x<=sampled_byte;
-                            6: rx_right_y<=sampled_byte;
-                            7: rx_left_x<=sampled_byte;
-                            8: rx_left_y<=sampled_byte;
+                            1: begin
+                                rx_valid <= sampled_byte==8'h41 || sampled_byte==8'h73 || sampled_byte==8'h79 || sampled_byte==8'h53;
+                                rx_analog <= sampled_byte==8'h73 || sampled_byte==8'h79 || sampled_byte==8'h53;
+                            end
+                            3: if(rx_valid) begin
+                                buttons[0]<=~sampled_byte[4]; buttons[1]<=~sampled_byte[6];
+                                buttons[2]<=~sampled_byte[7]; buttons[3]<=~sampled_byte[5];
+                                buttons[12]<=~sampled_byte[1]; buttons[13]<=~sampled_byte[2];
+                                buttons[14]<=~sampled_byte[0]; buttons[15]<=~sampled_byte[3];
+                            end
+                            4: if(rx_valid) begin
+                                buttons[4]<=~sampled_byte[6]; buttons[5]<=~sampled_byte[5];
+                                buttons[6]<=~sampled_byte[7]; buttons[7]<=~sampled_byte[4];
+                                buttons[8]<=~sampled_byte[2]; buttons[9]<=~sampled_byte[3];
+                                buttons[10]<=~sampled_byte[0]; buttons[11]<=~sampled_byte[1];
+                            end
+                            5: if(rx_valid && rx_analog) joy[7:0]<=sampled_byte;
+                            6: if(rx_valid && rx_analog) joy[15:8]<=sampled_byte;
+                            7: if(rx_valid && rx_analog) joy[23:16]<=sampled_byte;
+                            8: if(rx_valid && rx_analog) joy[31:24]<=sampled_byte;
                             default: ;
                         endcase
                         if(byte_index==8) begin
-                            if(rx_id==8'h41 || rx_id==8'h73 || rx_id==8'h79 || rx_id==8'h53) begin
-                                buttons<=decode_buttons(rx_buttons_lo,rx_buttons_hi);
-                                if(rx_id==8'h73 || rx_id==8'h79 || rx_id==8'h53)
-                                    joy<={rx_right_y,rx_right_x,rx_left_y,rx_left_x};
-                                else joy<=32'h8080_8080;
-                            end else begin
+                            if(!rx_valid) begin
                                 buttons<=0; joy<=32'h8080_8080;
-                            end
+                            end else if(!rx_analog) joy<=32'h8080_8080;
                             psx_att1<=1; psx_cmd<=1; updated<=1; state<=ST_IDLE;
                         end else begin
                             byte_index<=byte_index+1'b1; timer<=BYTE_GAP-1; state<=ST_GAP;
