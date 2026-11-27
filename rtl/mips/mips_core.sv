@@ -1597,9 +1597,16 @@ wire  [CK_W:0] ck_last = ck_dalias ? (CK_W + 1)'((1 << CK_WD) - 1) : ck_isw ? (C
 wire m_wbsel = !m_cl && !(m_c.tlbp || m_c.tlbr) && m_st && (m_cw || (!m_needs_slow && !m_sc_fail));      // (a store whose completion waits for the buffer)
 wire m_done_b = m_cw ? m_ph : (m_ld && m_cached) ? (ms == MS_DONE || (ms == MS_IDLE && m_lhit)) : m_needs_slow ? ms == MS_DONE : 1'b1;
 wire m_done_x = (m_c.tlbp || m_c.tlbr) ? ms == MS_DONE : m_cl ? ms == MS_DONE : (m_mapped && (ms == MS_IDLE || ms == MS_WALK)) ? 1'b0 : m_done_b;
-wire m_done_z = (m_k_fpu && fpu_busy) || (m_is_md && md_busy) || ms == MS_REFILL || ms == MS_REREAD || m_shwait ||
-                (CK_W != 0 && m_c.cache && ck_run && ck_n != ck_last);
-wire m_done_f = !m_valid || (m_done_x && !m_done_z && !(m_wbsel && wb_full));
+// Keep the independent stall sources as parallel terms. In particular, do
+// not put the FPU's completion flag through a shared OR tree before the
+// pipeline-advance path: that flag is a late-arriving input to f_pc.
+wire m_done_f = !m_valid || (m_done_x &&
+                !(m_k_fpu && fpu_busy) &&
+                !(m_is_md && md_busy) &&
+                (ms != MS_REFILL) && (ms != MS_REREAD) &&
+                !m_shwait &&
+                !(CK_W != 0 && m_c.cache && ck_run && ck_n != ck_last) &&
+                !(m_wbsel && wb_full));
 logic m_done;
 always_comb begin
     m_done = 1'b1;
