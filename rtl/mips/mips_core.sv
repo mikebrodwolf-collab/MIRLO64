@@ -1768,16 +1768,20 @@ end
 // take (f_hold) with the I-cache's read kept, so whether D's branch leaves
 // now is not asked here: if it does not, nothing is fetched
 wire f_hold = f_have && !f_take;
-logic [31:0] f_nx;
+logic [31:0] f_nx, f_nx_base;
+// Keep the miss redirect as the final data-select stage. d_imiss is a
+// high-fanout control (it also flushes D and preserves delay-slot state);
+// putting it at the front of this priority chain made its path to f_pc
+// traverse the remaining fetch-address muxes. Flush still has precedence.
 always_comb begin
-    if (flush) f_nx = flush_pc;
-    else if (d_imiss) f_nx = d_pc;
-    else if (b_redir) f_nx = rd_tgt;
-    else if (!f_have) f_nx = f_pc;
-    else if (ds_next) f_nx = (rd_res || rd_pend) ? rd_tgt : f_pc + 32'd4;    // (the delay slot of a branch decided, or not yet)
-    else if (d_ok && d_k_cti) f_nx = d_k_pred ? d_ptarget : f_pc + 32'd4;
-    else f_nx = f_pc + 32'd4;
+    if (flush) f_nx_base = flush_pc;
+    else if (b_redir) f_nx_base = rd_tgt;
+    else if (!f_have) f_nx_base = f_pc;
+    else if (ds_next) f_nx_base = (rd_res || rd_pend) ? rd_tgt : f_pc + 32'd4;    // (the delay slot of a branch decided, or not yet)
+    else if (d_ok && d_k_cti) f_nx_base = d_k_pred ? d_ptarget : f_pc + 32'd4;
+    else f_nx_base = f_pc + 32'd4;
 end
+always_comb f_nx = (!flush && d_imiss) ? d_pc : f_nx_base;
 always_comb begin
     ic_ren = !FAST || !f_hold || flush || d_imiss || b_redir;
     ic_raddr = FAST ? f_nx[IW+1:2] : f_next[IW+1:2];
