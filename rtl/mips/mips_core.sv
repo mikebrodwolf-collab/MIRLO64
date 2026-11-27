@@ -1728,11 +1728,17 @@ wire f_hit_k = f_ok && f_cached && !f_misal && ic_tq[ITW] && ic_tq[ITW-1:0] == f
 wire f_hit_m = f_xmap && f_ok && !f_misal && ic_tq[ITW] && ((f_mhit0 && ic_tq[ITW-1:0] == pg0_tag) || (f_mhit1 && ic_tq[ITW-1:0] == pg1_tag));
 wire f_hit = f_hit_k || f_hit_m;
 wire f_have = f_ok && (fs == FS_READY || (fs == FS_RUN && ((FAST ? f_cx : f_hit) || f_misal)));
-// The fetch only needs D's acceptance condition. Bypass the shared d_adv
-// net here so the late M completion signal has a shorter, local path to f_pc.
-// Factor D's acceptance into independent terms so a late M stall does not
-// have to pass through the shared d_adv pipeline-control node.
-wire f_take = (!d_valid || !m_stall) && (!d_valid || !d_stall);
+// Give fetch its own M-ready cone. Keep the late FPU busy flag at the
+// end of this local acceptance expression instead of sending it through
+// m_done_f's high-fanout shared pipeline-control net before reaching f_pc.
+wire f_m_ready = !m_valid || (m_done_x &&
+                  !(m_is_md && md_busy) &&
+                  (ms != MS_REFILL) && (ms != MS_REREAD) &&
+                  !m_shwait &&
+                  !(CK_W != 0 && m_c.cache && ck_run && ck_n != ck_last) &&
+                  !(m_wbsel && wb_full) &&
+                  !(m_k_fpu && fpu_busy));
+wire f_take = !d_valid || (!d_stall && f_m_ready);
 // (FAST) the fetch went the wrong way behind the delay slot: to rd_tgt now
 wire b_redir = FAST && rd_res && rd_fix && !ds_next;
 wire [31:0] rd_tgt = rd_tk ? rd_tt : rd_tn;
