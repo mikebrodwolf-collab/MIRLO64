@@ -84,7 +84,7 @@ jobs:
       - name: Detailed timing paths, if the fit fails
         if: failure()
         run: |
-          "$QUARTUS_BIN/quartus_sta" -t tools/area2/report_timing.tcl || true
+          "$QUARTUS_BIN/quartus_sta" -t tools/area2/report_timing.tcl
 
       - name: The compile's log and reports, if it failed
         if: failure()
@@ -95,5 +95,6 @@ jobs:
             projects_a2_nightly.compile.log
             projects_a2_nightly/output_files/*.summary
             projects_a2_nightly/output_files/*.rpt
+            projects_a2_nightly_timing.log
           retention-days: 14
           if-no-files-found: ignore
