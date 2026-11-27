@@ -2,6 +2,9 @@ name: Timing Probe
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - psx-dualshock-experiment
 
 permissions:
   contents: read
