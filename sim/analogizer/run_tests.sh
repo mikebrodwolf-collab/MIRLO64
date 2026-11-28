@@ -40,5 +40,12 @@ rm -f "$OBJ/yc.bin"
 # --- an_out: the pin map of each mode on the scan-out's timing
 build out an_out "$A/an_out.sv $A/an_yc.sv $A/an_ypbpr.sv $A/an_csync.sv $A/an_scandbl.sv" "$HERE/an_out/tb.cpp" --prefix Van_out
 "$OBJ/out/tb" | tail -1 | grep -q "ALL PASS" || { "$OBJ/out/tb"; rc=1; }
+# --- PlayStation DualShock: serial poll and all 16 digital button bits
+mkdir -p "$OBJ/psx"
+"$VL" --binary --timing -Wno-fatal --top-module psx_dualshock_test --Mdir "$OBJ/psx" \
+    "$A/an_psx_dualshock.sv" "$HERE/psx/psx_dualshock_test.sv" > "$OBJ/psx.log" 2>&1 \
+    || { grep -E "%Error" "$OBJ/psx.log" | head -20; tail -5 "$OBJ/psx.log"; echo "build psx failed"; exit 1; }
+"$OBJ/psx/Vpsx_dualshock_test" | tee "$OBJ/psx-test.log"
+grep -q "psx_dualshock_test: PASS" "$OBJ/psx-test.log" || rc=1
 [ $rc = 0 ] && echo "ALL PASS" || echo "SOME FAILED"
 exit $rc
