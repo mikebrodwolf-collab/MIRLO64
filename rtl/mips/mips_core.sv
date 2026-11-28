@@ -1653,7 +1653,7 @@ wire d_adv = e_adv && !d_stall;
 // (an eret completes at once -- FAST: it is no access, no FPU or multiply operation, no cache op and no shift, the flags the rest of m_done
 // waits on, so only the refill that M's state machine may be in holds it: not m_done's whole cone in front of the fetch's redirect)
 // (FAST: an eret is no access, so no translation fault holds it back: m_live without m_tlb_fault)
-wire m_eret_go = FAST ? m_valid && !m_take_int && !m_exc_v && m_c.eret && ms != MS_REFILL && ms != MS_REREAD : m_commit_e && m_c.eret;
+wire m_eret_go = FAST ? m_eret_f && !(int_pend_r && ms == MS_IDLE && !m_ph) && !m_exc_v : m_commit_e && m_c.eret;
 wire m_take_any = m_take_int || (m_valid && (m_exc_v || m_tlb_fault));      // (m_take_int || m_take_exc: an interrupt is taken whether or not E faulted)
 // (FAST, flush: an eret in M with an interrupt or an exception taken flushes anyway, so the eret's term here is M's valid and its flags alone;
 // m_eret_go, which the vector is chosen by, is the one that the exception does not hold back)
