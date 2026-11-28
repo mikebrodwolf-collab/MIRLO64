@@ -11,8 +11,8 @@ module psx_dualshock_test;
     wire psx_clk, psx_cmd, psx_att1, psx_att2, updated;
     wire [15:0] buttons;
 
-    // Five response bytes from a digital-mode controller. Both button bytes
-    // are zero: every digital button is pressed (the protocol is active-low).
+    // Five response bytes from a digital-mode controller. Distinctive active-low button patterns exercise the bit ordering, not just
+    // the fact that all 16 output bits can be set.
     logic [7:0] response [0:4];
     integer byte_index = 0;
     integer bit_index = 0;
@@ -44,13 +44,13 @@ module psx_dualshock_test;
         response[0] = 8'hFF;
         response[1] = 8'h41; // digital controller ID
         response[2] = 8'h5A;
-        response[3] = 8'h00; // all eight buttons pressed
-        response[4] = 8'h00; // all eight buttons pressed
+        response[3] = 8'hA5;
+        response[4] = 8'h5A
 
         wait (updated);
         #1;
-        if (buttons !== 16'hFFFF) begin
-            $display("FAIL: expected all 16 digital buttons, got %h", buttons);
+        if (buttons !== 16'h9563) begin
+            $display("FAIL: expected mapped button bitmap 9563, got %h", buttons);
             errors = errors + 1;
         end
         if (psx_att1 !== 1'b1 || psx_att2 !== 1'b1) begin
